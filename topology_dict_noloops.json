@@ -1,0 +1,16 @@
+{
+  "Notes": "Topology of a very fast (loop free) network. All links are Gigabit, no loss, and 10000 packet queue size",
+  "switches": ["s0", "s1", "s2"],
+  "hosts": ["h00", "h01", "h02", "h10", "h11", "h20", "h21"],
+  "link_params": [
+    {"source":  "h00", "destination": "s0", "options": {"bw": 1000, "loss": 0, "max_queue_size": 10000}},
+    {"source":  "h01", "destination": "s0", "options": {"bw": 1000, "loss": 0, "max_queue_size": 10000}},
+    {"source":  "h02", "destination": "s0", "options": {"bw": 1000, "loss": 0, "max_queue_size": 10000}},
+    {"source":  "h10", "destination": "s1", "options": {"bw": 1000, "loss": 0, "max_queue_size": 10000}},
+    {"source":  "h11", "destination": "s1", "options": {"bw": 1000, "loss": 0, "max_queue_size": 10000}},
+    {"source":  "h20", "destination": "s2", "options": {"bw": 1000, "loss": 0, "max_queue_size": 10000}},
+    {"source":  "h21", "destination": "s2", "options": {"bw": 1000, "loss": 0, "max_queue_size": 10000}},
+    {"source":  "s0", "destination": "s1", "options": {"bw": 1000, "loss": 0, "max_queue_size": 10000}},
+    {"source":  "s1", "destination": "s2", "options": {"bw": 1000, "loss": 0, "max_queue_size": 10000}}
+  ]
+}

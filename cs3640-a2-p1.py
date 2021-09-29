@@ -98,6 +98,8 @@ class EmulateNet:
         :return:
         """
 
+        #
+        # go
         self.topology = Topo()
 
         """
@@ -106,14 +108,16 @@ class EmulateNet:
         ./topology_dict_loops.json
         """
 
+        #
         # load from json
         with open(topology_dict) as f:
             d = json.load(f)
-
         self.hosts = d["hosts"]
         self.switches = d["switches"]
         self.links = d["link_params"]
 
+        #
+        # topos
         for host in self.hosts:
             # str name
             self.topology.addHost(host)
@@ -122,7 +126,9 @@ class EmulateNet:
             self.topology.addSwitch(switch)
             # dict {}
         for link in self.links:
-            self.topology.addLink(link["source"], link["destination"], link["options"])
+            self.topology.addLink(
+                link["source"], link["destination"], **link["options"]
+            )
 
     def show_topology_characteristics(self):
         """

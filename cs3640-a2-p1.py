@@ -91,6 +91,19 @@ class EmulateNet:
         :param topology_dict: Dictionary containing topology of network to be emulated.
         :return:
         """
+        
+        """
+        relative paths
+        ./topology_dict_noloops.json
+        ./topology_dict_loops.json
+        """
+        
+        with open(topology_dict) as f:
+            d = json.load(f)
+        
+        self.hosts = d["hosts"]
+        self.switches = d["switches"]
+        self.links = d["link_params"]
 
     def show_topology_characteristics(self):
         """

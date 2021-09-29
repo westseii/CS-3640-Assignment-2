@@ -106,6 +106,7 @@ class EmulateNet:
         ./topology_dict_loops.json
         """
 
+        # load from json
         with open(topology_dict) as f:
             d = json.load(f)
 
@@ -121,7 +122,7 @@ class EmulateNet:
             self.topology.addSwitch(switch)
             # dict {}
         for link in self.links:
-            self.topology.addLink(link)
+            self.topology.addLink(link["source"], link["destination"], link["options"])
 
     def show_topology_characteristics(self):
         """

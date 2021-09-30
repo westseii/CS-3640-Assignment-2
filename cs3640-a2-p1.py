@@ -50,10 +50,13 @@ from mininet.log import setLogLevel
 
 # setLogLevel('debug')
 
+"""
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree as mst
 
 import matplotlib.pyplot as plt
+"""
+
 
 # my commit
 
@@ -110,7 +113,7 @@ class EmulateNet:
 
         #
         # load from json
-        with open(topology_dict) as f:
+        with open("./topology_dict_noloops.json") as f:
             d = json.load(f)
         self.hosts = d["hosts"]
         self.switches = d["switches"]
@@ -475,7 +478,7 @@ def main():
         "sudo mn -c"
     )  # This will clear up any residue from previous Mininet runs that might
     # interfere with your current run.
-    Tests(checkpoint=7)
+    Tests(checkpoint=1)
 
 
 if __name__ == "__main__":

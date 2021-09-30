@@ -50,13 +50,10 @@ from mininet.log import setLogLevel
 
 # setLogLevel('debug')
 
-"""
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree as mst
 
 import matplotlib.pyplot as plt
-"""
-
 
 # my commit
 
@@ -118,6 +115,9 @@ class EmulateNet:
         self.hosts = d["hosts"]
         self.switches = d["switches"]
         self.links = d["link_params"]
+
+        #
+        # eliminate loops
 
         #
         # topos

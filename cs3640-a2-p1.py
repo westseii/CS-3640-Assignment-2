@@ -109,8 +109,8 @@ class EmulateNet:
         """
 
         """
-        with open(./topology_dict_noloops.json) as f:
-            d = json.load(f)
+        with open("./topology_dict_noloops.json") as f:
+            dict = json.load(f)
         """
 
         self.hosts = topology_dict["hosts"]
@@ -152,6 +152,8 @@ class EmulateNet:
         :return:
         """
 
+        self.emulated_net.start()
+
     def stop_emulator(self):
         """
         Checkpoint ID: 3
@@ -160,6 +162,8 @@ class EmulateNet:
         Stop Mininet emulation
         :return:
         """
+
+        self.emulated_net.stop()
 
 
 class AnalyzePerformanceCharacteristics:

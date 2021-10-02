@@ -191,6 +191,13 @@ class AnalyzePerformanceCharacteristics:
         :return: p_loss: The fraction of pings that did not complete.
         """
 
+        #
+        # run pings
+        if hosts == None:
+            self.em_net.emulated_net.pingAll(timeout)
+        else:
+            self.em_net.emulated_net.ping(hosts, timeout)
+
     def run_iperf(self, client, server, l4Type="UDP", udpBw="1M", seconds=3):
         """
         Checkpoint ID:5
@@ -481,7 +488,7 @@ def main():
         "sudo mn -c"
     )  # This will clear up any residue from previous Mininet runs that might
     # interfere with your current run.
-    Tests(checkpoint=3)
+    Tests(checkpoint=4)
 
 
 if __name__ == "__main__":

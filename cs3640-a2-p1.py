@@ -191,6 +191,9 @@ class AnalyzePerformanceCharacteristics:
         :return: p_loss: The fraction of pings that did not complete.
         """
 
+        # do I need this?
+        self.em_net.emulated_net.waitConnected()
+
         #
         # run pings
         if hosts == None:

@@ -177,7 +177,7 @@ class AnalyzePerformanceCharacteristics:
         """
         self.em_net = em_net
 
-    def run_pings(self, hosts=None, timeout="10ms"):
+    def run_pings(self, hosts=None, timeout="0.01"):
         """
         Checkpoint ID: 4
         Max score: 5 points
@@ -194,9 +194,11 @@ class AnalyzePerformanceCharacteristics:
         #
         # run pings
         if hosts == None:
-            self.em_net.emulated_net.pingAll(timeout)
+            # ploss packet loss percentage
+            return self.em_net.emulated_net.pingAll(timeout)
         else:
-            self.em_net.emulated_net.ping(hosts, timeout)
+            # ploss packet loss percentage
+            return self.em_net.emulated_net.ping(hosts, timeout)
 
     def run_iperf(self, client, server, l4Type="UDP", udpBw="1M", seconds=3):
         """

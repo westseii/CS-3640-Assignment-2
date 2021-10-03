@@ -245,7 +245,9 @@ class AnalyzePerformanceCharacteristics:
 
         print(speeds)
 
-        rec = re.findall(r"\d*\.\d+|\d+", speeds[1])  # 1 == server?
+        #
+        # regex to get speed in MBps as float
+        rec = re.findall(r"\d*\.\d+|\d+", speeds[1])  # 1 = server, 2 = client?
 
         return float(rec[0])
 
@@ -520,7 +522,7 @@ def main():
         "sudo mn -c"
     )  # This will clear up any residue from previous Mininet runs that might
     # interfere with your current run.
-    Tests(checkpoint=4)
+    Tests(checkpoint=6)
 
 
 if __name__ == "__main__":

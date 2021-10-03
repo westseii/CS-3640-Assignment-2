@@ -205,9 +205,10 @@ class AnalyzePerformanceCharacteristics:
         if hosts == None:
             p_loss = self.em_net.emulated_net.pingAll(timeout)
         else:
-            # !!! THIS SHOULD PING BETWEEN ALL SPECIFIED HOSTS
-            # p_loss = self.em_net.emulated_net.ping(hosts, timeout)
-            p_loss = self.em_net.emulated_net.pingAll(timeout)  # not correct
+            hostNodes = []
+            for host in hosts:
+                hostNodes.append(self.em_net.emulated_net.get(host))
+            p_loss = self.em_net.emulated_net.ping(hostNodes, timeout)
 
         return p_loss
 
@@ -519,7 +520,7 @@ def main():
         "sudo mn -c"
     )  # This will clear up any residue from previous Mininet runs that might
     # interfere with your current run.
-    Tests(checkpoint=5)
+    Tests(checkpoint=4)
 
 
 if __name__ == "__main__":

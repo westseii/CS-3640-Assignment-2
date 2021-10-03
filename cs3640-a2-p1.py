@@ -43,6 +43,8 @@ import os
 import json
 import random
 
+import re
+
 from mininet.net import Mininet
 from mininet.topo import Topo
 from mininet.link import TCLink
@@ -102,23 +104,25 @@ class EmulateNet:
         # go
         self.topology = Topo()
 
+        #
+        # !!! CREATE CSR FROM TOPO FILE
+        # !!! CREATE MST FROM CSR
+        # !!! CREATE TOPO FROM MST
+        # eliminate loops - mst
+
         """
         relative paths
         ./topology_dict_noloops.json
         ./topology_dict_loops.json
         """
 
-        """
+        # !!! OVERRIDING FOR NOLOOPS
         with open("./topology_dict_noloops.json") as f:
             dict = json.load(f)
-        """
 
-        self.hosts = topology_dict["hosts"]
-        self.switches = topology_dict["switches"]
-        self.links = topology_dict["link_params"]
-
-        #
-        # eliminate loops - mst
+        self.hosts = dict["hosts"]
+        self.switches = dict["switches"]
+        self.links = dict["link_params"]
 
         for host in self.hosts:
             # str name
@@ -194,14 +198,18 @@ class AnalyzePerformanceCharacteristics:
         # do I need this?
         self.em_net.emulated_net.waitConnected()
 
+        p_loss = 0
+
         #
         # run pings
         if hosts == None:
-            # ploss packet loss percentage
-            return self.em_net.emulated_net.pingAll(timeout)
+            p_loss = self.em_net.emulated_net.pingAll(timeout)
         else:
-            # ploss packet loss percentage
-            return self.em_net.emulated_net.ping(hosts, timeout)
+            # !!! THIS SHOULD PING BETWEEN ALL SPECIFIED HOSTS
+            # p_loss = self.em_net.emulated_net.ping(hosts, timeout)
+            p_loss = self.em_net.emulated_net.pingAll(timeout)  # not correct
+
+        return p_loss
 
     def run_iperf(self, client, server, l4Type="UDP", udpBw="1M", seconds=3):
         """
@@ -221,6 +229,24 @@ class AnalyzePerformanceCharacteristics:
         :param seconds: Time in seconds for traffic to be generated.
         :return: Receiving rate (throughput) at server in MBps
         """
+
+        #
+        # run iPerf between two nodes
+        speeds = self.em_net.emulated_net.iperf(
+            [
+                self.em_net.emulated_net.get(client),
+                self.em_net.emulated_net.get(server),
+            ],
+            l4Type,
+            udpBw,
+            seconds,
+        )
+
+        print(speeds)
+
+        rec = re.findall(r"\d*\.\d+|\d+", speeds[1])  # 1 == server?
+
+        return float(rec[0])
 
     def get_average_throughput_all_pairs(self, iterations=2, udpBw="1M", seconds=3):
         """
@@ -493,7 +519,7 @@ def main():
         "sudo mn -c"
     )  # This will clear up any residue from previous Mininet runs that might
     # interfere with your current run.
-    Tests(checkpoint=4)
+    Tests(checkpoint=5)
 
 
 if __name__ == "__main__":

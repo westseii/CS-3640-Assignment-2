@@ -238,6 +238,7 @@ class AnalyzePerformanceCharacteristics:
             ],
             l4Type,
             udpBw,
+            None,  # iperf format argument
             seconds,
         )
 
@@ -274,8 +275,8 @@ class AnalyzePerformanceCharacteristics:
 
         i = 0
         while i < iterations:
-            for pair in pairs:
-                client, server = list(pair)[0], list(pair)[1]
+            for p in pairs:
+                client, server = list(p)[0], list(p)[1]
                 results.append(self.run_iperf(client, server, "UDP", udpBw, seconds))
             i += 1
 

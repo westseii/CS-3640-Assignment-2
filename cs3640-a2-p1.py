@@ -43,8 +43,6 @@ import os
 import json
 import random
 
-import re
-
 from mininet.net import Mininet
 from mininet.topo import Topo
 from mininet.link import TCLink
@@ -57,7 +55,8 @@ from scipy.sparse.csgraph import minimum_spanning_tree as mst
 
 import matplotlib.pyplot as plt
 
-# my commit
+import re
+from itertools import combinations
 
 
 class EmulateNet:
@@ -105,9 +104,6 @@ class EmulateNet:
         self.topology = Topo()
 
         #
-        # !!! CREATE CSR FROM TOPO FILE
-        # !!! CREATE MST FROM CSR
-        # !!! CREATE TOPO FROM MST
         # eliminate loops - mst
 
         """
@@ -203,9 +199,11 @@ class AnalyzePerformanceCharacteristics:
         #
         # run pings
         if hosts == None:
+            # ping between all hosts
             p_loss = self.em_net.emulated_net.pingAll(timeout)
         else:
             hostNodes = []
+            # ping between all specified hosts
             for host in hosts:
                 hostNodes.append(self.em_net.emulated_net.get(host))
             p_loss = self.em_net.emulated_net.ping(hostNodes, timeout)
@@ -243,11 +241,11 @@ class AnalyzePerformanceCharacteristics:
             seconds,
         )
 
-        print(speeds)
+        # print(speeds)
 
         #
-        # regex to get speed in MBps as float
-        rec = re.findall(r"\d*\.\d+|\d+", speeds[1])  # 1 = server, 2 = client?
+        # regex to get speed (in MBps) as float
+        rec = re.findall(r"\d*\.\d+|\d+", speeds[2])
 
         return float(rec[0])
 
@@ -266,6 +264,22 @@ class AnalyzePerformanceCharacteristics:
         :param seconds: The time in seconds for the traffic to be generated.
         :return: Average server receiving rate (in MBps) over all pairs and all iterations.
         """
+
+        hostNames = []
+        for hn in self.em_net.emulated_net.hosts:
+            hostNames.append(hn.name)
+        pairs = list(combinations(hostNames, 2))
+
+        results = []  # results of run_iperf() on all host pairs
+
+        iter = 0
+        while iter < iterations:
+            for pair in pairs:
+                client, server = list(pair)[0], list(pair)[1]
+                results.append(self.run_iperf(client, server, "UDP", udpBw, seconds))
+        iter += 1
+
+        return sum(results) / len(results)  # average
 
 
 class Tests:

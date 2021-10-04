@@ -272,12 +272,12 @@ class AnalyzePerformanceCharacteristics:
 
         results = []  # results of run_iperf() on all host pairs
 
-        iter = 0
-        while iter < iterations:
+        i = 0
+        while i < iterations:
             for pair in pairs:
                 client, server = list(pair)[0], list(pair)[1]
                 results.append(self.run_iperf(client, server, "UDP", udpBw, seconds))
-        iter += 1
+            i += 1
 
         return sum(results) / len(results)  # average
 

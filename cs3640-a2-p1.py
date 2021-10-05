@@ -246,9 +246,9 @@ class AnalyzePerformanceCharacteristics:
 
         #
         # regex to get speed (in MBps) as float
-        rec = re.findall(r"\d*\.\d+|\d+", speeds[2])
+        result = re.findall(r"\d*\.\d+|\d+", speeds[2])
 
-        return float(rec[0])
+        return float(result[0])
 
     def get_average_throughput_all_pairs(self, iterations=2, udpBw="1M", seconds=3):
         """
@@ -266,6 +266,22 @@ class AnalyzePerformanceCharacteristics:
         :return: Average server receiving rate (in MBps) over all pairs and all iterations.
         """
 
+        pairs = list(combinations(self.em_net.emulated_net.hosts, 2))
+
+        results = []  # results of run_iperf() on all host pairs
+
+        i = 0  # current iteration
+        while i < iterations:
+            for p in pairs:
+                client, server = p[0], p[1]
+                results.append(
+                    self.run_iperf(client.name, server.name, "UDP", udpBw, seconds)
+                )
+            i += 1
+
+        return sum(results) / len(results)  # average
+
+        """
         hostNames = []
         for hn in self.em_net.emulated_net.hosts:
             hostNames.append(hn.name)
@@ -281,6 +297,7 @@ class AnalyzePerformanceCharacteristics:
             i += 1
 
         return sum(results) / len(results)  # average
+        """
 
 
 class Tests:

@@ -246,7 +246,7 @@ class AnalyzePerformanceCharacteristics:
 
         #
         # regex to get speed (in MBps) as float
-        result = re.findall(r"\d*\.\d+|\d+", speeds[2])
+        result = re.findall(r"\d*\.\d+|\d+", speeds[2])  # 1 or 2?
 
         return float(result[0])
 
@@ -273,10 +273,12 @@ class AnalyzePerformanceCharacteristics:
         i = 0  # current iteration
         while i < iterations:
             for p in pairs:
-                client, server = p[0], p[1]
-                results.append(
-                    self.run_iperf(client.name, server.name, "UDP", udpBw, seconds)
-                )
+                a, b = p[0], p[1]
+                # test each pair as sender/receiver
+                # (a, b)
+                results.append(self.run_iperf(a.name, b.name, "UDP", udpBw, seconds))
+                # (b, a)
+                results.append(self.run_iperf(b.name, a.name, "UDP", udpBw, seconds))
             i += 1
 
         return sum(results) / len(results)  # average
@@ -544,6 +546,59 @@ def plot_impact_of_link_characteristics():
     :return:
     """
 
+    t = Tests()
+
+    x = []
+    y = []
+
+    y_label = "average server receiving rate"
+
+    #
+    # transmission rate
+    x_label = "transmission_rate"
+    generated = t.generate_topology_dicts(x_label, None)
+    for key in generated:
+        x.append(generated[key]["link_params"][0]["options"]["bw"])
+        t.em_net = EmulateNet(generated[key])
+        t.em_net.start_emulator()
+        t.a_perf = AnalyzePerformanceCharacteristics(t.em_net)
+        y.append(t.a_perf.get_average_throughput_all_pairs())
+        t.em_net.stop_emulator()
+
+    Tests.plot_xy(x, y, x_label, y_label, "plot__" + x_label)
+    x.clear()
+    y.clear()
+
+    #
+    # loss rate
+    x_label = "loss_rate"
+    generated = t.generate_topology_dicts(x_label, None)
+    for key in generated:
+        x.append(generated[key]["link_params"][0]["options"]["loss"])
+        t.em_net = EmulateNet(generated[key])
+        t.em_net.start_emulator()
+        t.a_perf = AnalyzePerformanceCharacteristics(t.em_net)
+        y.append(t.a_perf.get_average_throughput_all_pairs())
+        t.em_net.stop_emulator()
+
+    Tests.plot_xy(x, y, x_label, y_label, "plot__" + x_label)
+    x.clear()
+    y.clear()
+
+    #
+    # queue size
+    x_label = "queue_size"
+    generated = t.generate_topology_dicts(x_label, None)
+    for key in generated:
+        x.append(generated[key]["link_params"][0]["options"]["max_queue_size"])
+        t.em_net = EmulateNet(generated[key])
+        t.em_net.start_emulator()
+        t.a_perf = AnalyzePerformanceCharacteristics(t.em_net)
+        y.append(t.a_perf.get_average_throughput_all_pairs())
+        t.em_net.stop_emulator()
+
+    Tests.plot_xy(x, y, x_label, y_label, "plot__" + x_label)
+
 
 def main():
     """
@@ -554,7 +609,7 @@ def main():
         "sudo mn -c"
     )  # This will clear up any residue from previous Mininet runs that might
     # interfere with your current run.
-    Tests(checkpoint=6)
+    Tests(checkpoint=7)
 
 
 if __name__ == "__main__":

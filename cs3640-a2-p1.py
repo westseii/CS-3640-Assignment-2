@@ -238,7 +238,7 @@ class AnalyzePerformanceCharacteristics:
             ],
             l4Type,
             udpBw,
-            None,  # iperf format argument
+            "M",  # iperf format argument, MBps
             seconds,
         )
 
@@ -273,7 +273,7 @@ class AnalyzePerformanceCharacteristics:
 
         results = []  # results of run_iperf() on all host pairs
 
-        i = 0
+        i = 0  # current iteration
         while i < iterations:
             for p in pairs:
                 client, server = list(p)[0], list(p)[1]

@@ -11,3 +11,5 @@ Scott West: Checked over all problems and finalized submission. Managed the Git 
 
 #### Other:
 We also had a final group meeting where we collectively went over everything for both Part 1 and Part 2 of the assignment. We met on Tuesdays and Thursdays after class to do pair programming on part 1 of the assignment.
+
+https://github.com/westseii/CS-3640-Assignment-2

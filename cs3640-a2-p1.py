@@ -283,24 +283,6 @@ class AnalyzePerformanceCharacteristics:
 
         return sum(results) / len(results)  # average
 
-        """
-        hostNames = []
-        for hn in self.em_net.emulated_net.hosts:
-            hostNames.append(hn.name)
-        pairs = list(combinations(hostNames, 2))
-
-        results = []  # results of run_iperf() on all host pairs
-
-        i = 0  # current iteration
-        while i < iterations:
-            for p in pairs:
-                client, server = list(p)[0], list(p)[1]
-                results.append(self.run_iperf(client, server, "UDP", udpBw, seconds))
-            i += 1
-
-        return sum(results) / len(results)  # average
-        """
-
 
 class Tests:
     """
@@ -548,8 +530,8 @@ def plot_impact_of_link_characteristics():
 
     t = Tests()
 
-    x = []
-    y = []
+    xs = []
+    ys = []
 
     y_label = "average server receiving rate"
 
@@ -558,46 +540,49 @@ def plot_impact_of_link_characteristics():
     x_label = "transmission_rate"
     generated = t.generate_topology_dicts(x_label, None)
     for key in generated:
-        x.append(generated[key]["link_params"][0]["options"]["bw"])
+        xs = [1000, 100, 10, 5]  # bw
+
         t.em_net = EmulateNet(generated[key])
         t.em_net.start_emulator()
         t.a_perf = AnalyzePerformanceCharacteristics(t.em_net)
-        y.append(t.a_perf.get_average_throughput_all_pairs())
+        ys.append(t.a_perf.get_average_throughput_all_pairs())
         t.em_net.stop_emulator()
 
-    Tests.plot_xy(x, y, x_label, y_label, "plot__" + x_label)
-    x.clear()
-    y.clear()
+    Tests.plot_xy(xs, ys, x_label, y_label, "plot__" + x_label)
+
+    ys.clear()
 
     #
     # loss rate
     x_label = "loss_rate"
     generated = t.generate_topology_dicts(x_label, None)
     for key in generated:
-        x.append(generated[key]["link_params"][0]["options"]["loss"])
+        xs = [1, 10, 20, 30]  # loss
+
         t.em_net = EmulateNet(generated[key])
         t.em_net.start_emulator()
         t.a_perf = AnalyzePerformanceCharacteristics(t.em_net)
-        y.append(t.a_perf.get_average_throughput_all_pairs())
+        ys.append(t.a_perf.get_average_throughput_all_pairs())
         t.em_net.stop_emulator()
 
-    Tests.plot_xy(x, y, x_label, y_label, "plot__" + x_label)
-    x.clear()
-    y.clear()
+    Tests.plot_xy(xs, ys, x_label, y_label, "plot__" + x_label)
+
+    ys.clear()
 
     #
     # queue size
     x_label = "queue_size"
     generated = t.generate_topology_dicts(x_label, None)
     for key in generated:
-        x.append(generated[key]["link_params"][0]["options"]["max_queue_size"])
+        xs = [10 ** 2, 10 ** 1, 1]  # q_size
+
         t.em_net = EmulateNet(generated[key])
         t.em_net.start_emulator()
         t.a_perf = AnalyzePerformanceCharacteristics(t.em_net)
-        y.append(t.a_perf.get_average_throughput_all_pairs())
+        ys.append(t.a_perf.get_average_throughput_all_pairs())
         t.em_net.stop_emulator()
 
-    Tests.plot_xy(x, y, x_label, y_label, "plot__" + x_label)
+    Tests.plot_xy(xs, ys, x_label, y_label, "plot__" + x_label)
 
 
 def main():

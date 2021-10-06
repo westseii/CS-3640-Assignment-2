@@ -112,13 +112,14 @@ class EmulateNet:
         ./topology_dict_loops.json
         """
 
-        # !!! OVERRIDING FOR NOLOOPS
+        """
         with open("./topology_dict_noloops.json") as f:
             dict = json.load(f)
+        """
 
-        self.hosts = dict["hosts"]
-        self.switches = dict["switches"]
-        self.links = dict["link_params"]
+        self.hosts = topology_dict["hosts"]
+        self.switches = topology_dict["switches"]
+        self.links = topology_dict["link_params"]
 
         for host in self.hosts:
             # str name
@@ -594,7 +595,7 @@ def main():
         "sudo mn -c"
     )  # This will clear up any residue from previous Mininet runs that might
     # interfere with your current run.
-    Tests(checkpoint=7)
+    Tests(checkpoint=6)
 
 
 if __name__ == "__main__":

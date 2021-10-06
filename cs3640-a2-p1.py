@@ -47,6 +47,7 @@ from mininet.net import Mininet
 from mininet.topo import Topo
 from mininet.link import TCLink
 from mininet.log import setLogLevel
+
 # setLogLevel('debug')
 
 from scipy.sparse import csr_matrix
@@ -54,25 +55,32 @@ from scipy.sparse.csgraph import minimum_spanning_tree as mst
 
 import matplotlib.pyplot as plt
 
+import re
+from itertools import combinations
+
 
 class EmulateNet:
     """
-        Class for functions to handle Mininet topology construction, starting/stopping of the emulator.
+    Class for functions to handle Mininet topology construction, starting/stopping of the emulator.
     """
 
     def __init__(self, topology_dict):
         """
-            :param topology_dict: This is a dictionary containing information about the topology of the network to
-                                  be emulated. It contains a list of hosts, a list of switches, and a list of links.
-                                  topology_dict_noloops.json is a JSON file which demonstrates the format required.
-                                  topology_dict_loops.json is a JSON file which contains a topology with loops.
+        :param topology_dict: This is a dictionary containing information about the topology of the network to
+                              be emulated. It contains a list of hosts, a list of switches, and a list of links.
+                              topology_dict_noloops.json is a JSON file which demonstrates the format required.
+                              topology_dict_loops.json is a JSON file which contains a topology with loops.
         """
         self.hosts, self.switches = [], []
         self.links = []
-        self.minimum_spanning_tree = None  # This is a matrix that holds the MST of the network.
+        self.minimum_spanning_tree = (
+            None  # This is a matrix that holds the MST of the network.
+        )
         self.topology = None
         self.__create_net_from_topology_dict(topology_dict)
-        self.emulated_net = Mininet(topo=self.topology, link=TCLink)  # We use the TCLink link object because we'd
+        self.emulated_net = Mininet(
+            topo=self.topology, link=TCLink
+        )  # We use the TCLink link object because we'd
         # like to be able to have control over link characteristics such as bandwidth, loss, etc.
 
     def __create_net_from_topology_dict(self, topology_dict):
@@ -90,6 +98,40 @@ class EmulateNet:
         :param topology_dict: Dictionary containing topology of network to be emulated.
         :return:
         """
+
+        #
+        # go
+        self.topology = Topo()
+
+        #
+        # eliminate loops - mst
+
+        """
+        relative paths
+        ./topology_dict_noloops.json
+        ./topology_dict_loops.json
+        """
+
+        """
+        with open("./topology_dict_noloops.json") as f:
+            dict = json.load(f)
+        """
+
+        self.hosts = topology_dict["hosts"]
+        self.switches = topology_dict["switches"]
+        self.links = topology_dict["link_params"]
+
+        for host in self.hosts:
+            # str name
+            self.topology.addHost(host)
+        for switch in self.switches:
+            # str name
+            self.topology.addSwitch(switch)
+            # dict {}
+        for link in self.links:
+            self.topology.addLink(
+                link["source"], link["destination"], **link["options"]
+            )
 
     def show_topology_characteristics(self):
         """
@@ -111,6 +153,8 @@ class EmulateNet:
         :return:
         """
 
+        self.emulated_net.start()
+
     def stop_emulator(self):
         """
         Checkpoint ID: 3
@@ -120,10 +164,12 @@ class EmulateNet:
         :return:
         """
 
+        self.emulated_net.stop()
+
 
 class AnalyzePerformanceCharacteristics:
     """
-        Class for functions that test an emulated network's reachability and performance.
+    Class for functions that test an emulated network's reachability and performance.
     """
 
     def __init__(self, em_net):
@@ -132,7 +178,7 @@ class AnalyzePerformanceCharacteristics:
         """
         self.em_net = em_net
 
-    def run_pings(self, hosts=None, timeout='10ms'):
+    def run_pings(self, hosts=None, timeout="0.01"):
         """
         Checkpoint ID: 4
         Max score: 5 points
@@ -146,7 +192,26 @@ class AnalyzePerformanceCharacteristics:
         :return: p_loss: The fraction of pings that did not complete.
         """
 
-    def run_iperf(self, client, server, l4Type='UDP', udpBw='1M', seconds=3):
+        # do I need this?
+        self.em_net.emulated_net.waitConnected()
+
+        p_loss = 0
+
+        #
+        # run pings
+        if hosts == None:
+            # ping between all hosts
+            p_loss = self.em_net.emulated_net.pingAll(timeout)
+        else:
+            hostNodes = []
+            # ping between all specified hosts
+            for host in hosts:
+                hostNodes.append(self.em_net.emulated_net.get(host))
+            p_loss = self.em_net.emulated_net.ping(hostNodes, timeout)
+
+        return p_loss
+
+    def run_iperf(self, client, server, l4Type="UDP", udpBw="1M", seconds=3):
         """
         Checkpoint ID:5
         Max score: 5 points
@@ -165,7 +230,28 @@ class AnalyzePerformanceCharacteristics:
         :return: Receiving rate (throughput) at server in MBps
         """
 
-    def get_average_throughput_all_pairs(self, iterations=2, udpBw='1M', seconds=3):
+        #
+        # run iPerf between two nodes
+        speeds = self.em_net.emulated_net.iperf(
+            [
+                self.em_net.emulated_net.get(client),
+                self.em_net.emulated_net.get(server),
+            ],
+            l4Type,
+            udpBw,
+            "M",  # iperf format argument, MBps
+            seconds,
+        )
+
+        # print(speeds)
+
+        #
+        # regex to get speed (in MBps) as float
+        result = re.findall(r"\d*\.\d+|\d+", speeds[2])  # 1 or 2?
+
+        return float(result[0])
+
+    def get_average_throughput_all_pairs(self, iterations=2, udpBw="1M", seconds=3):
         """
         Checkpoint ID: 6
         Max score: 5 points
@@ -181,6 +267,23 @@ class AnalyzePerformanceCharacteristics:
         :return: Average server receiving rate (in MBps) over all pairs and all iterations.
         """
 
+        pairs = list(combinations(self.em_net.emulated_net.hosts, 2))
+
+        results = []  # results of run_iperf() on all host pairs
+
+        i = 0  # current iteration
+        while i < iterations:
+            for p in pairs:
+                a, b = p[0], p[1]
+                # test each pair as sender/receiver
+                # (a, b)
+                results.append(self.run_iperf(a.name, b.name, "UDP", udpBw, seconds))
+                # (b, a)
+                results.append(self.run_iperf(b.name, a.name, "UDP", udpBw, seconds))
+            i += 1
+
+        return sum(results) / len(results)  # average
+
 
 class Tests:
     """
@@ -190,13 +293,17 @@ class Tests:
     These are just helper functions to help you identify bugs in your own code.
     I expect you to do more extensive testing.
     """
+
     def __init__(self, checkpoint=0):
         """
         :param checkpoint: The ID of the checkpoint until which you'd like your code to be tested.
         """
         self.em_net = None
         self.a_perf = None
-        self.topology_configs = ["./topology_dict_loops.json", "./topology_dict_noloops.json"]
+        self.topology_configs = [
+            "./topology_dict_loops.json",
+            "./topology_dict_noloops.json",
+        ]
         if checkpoint == 1:
             self.__run_cp1()
         elif checkpoint == 2:
@@ -216,24 +323,32 @@ class Tests:
 
     def __run_cp1(self):
         os.system("sudo mn -c")
-        filename = self.topology_configs[random.randint(1, len(self.topology_configs))-1]
+        filename = self.topology_configs[
+            random.randint(1, len(self.topology_configs)) - 1
+        ]
         print("Constructing topology from %s" % filename)
         with open(filename) as fp:
             topology_dict = json.load(fp)
         self.em_net = EmulateNet(topology_dict)
         self.em_net.show_topology_characteristics()
-        print("Checkpoint 1 reached [10 points]. Inspect your constructed network to verify correctness with "
-              "specifications. Is it loop free? Do the links have the same characteristics as in the input?")
+        print(
+            "Checkpoint 1 reached [10 points]. Inspect your constructed network to verify correctness with "
+            "specifications. Is it loop free? Do the links have the same characteristics as in the input?"
+        )
 
     def __run_cp2(self):
         self.__run_cp1()
         self.em_net.start_emulator()
-        print("Checkpoint 2 reached [12.5 points]. Did Mininet begin emulating your network as expected?")
+        print(
+            "Checkpoint 2 reached [12.5 points]. Did Mininet begin emulating your network as expected?"
+        )
 
     def __run_cp3(self):
         self.__run_cp2()
         self.em_net.stop_emulator()
-        print("Checkpoint 3 reached [15 points]. Did Mininet stop emulating your network as expected?")
+        print(
+            "Checkpoint 3 reached [15 points]. Did Mininet stop emulating your network as expected?"
+        )
 
     def __run_cp4(self):
         self.__run_cp1()
@@ -243,12 +358,20 @@ class Tests:
         p_loss = self.a_perf.run_pings()
         print("Packet loss rate during pings [all pairs]: %10.2f" % p_loss)
         while len(host_ids) < 2:
-            host_ids = list(set([random.randint(1, len(self.em_net.hosts))-1
-                                 for i in range(0, random.randint(1, len(self.em_net.hosts))-1)]))
+            host_ids = list(
+                set(
+                    [
+                        random.randint(1, len(self.em_net.hosts)) - 1
+                        for i in range(0, random.randint(1, len(self.em_net.hosts)) - 1)
+                    ]
+                )
+            )
         p_loss = self.a_perf.run_pings([self.em_net.hosts[i] for i in host_ids])
         print("Packet loss rate during pings [random pairs]: %10.2f" % p_loss)
         self.em_net.stop_emulator()
-        print("Checkpoint 4 reached [20 points]. Did the pings run error free? Is the packet loss rate accurate?")
+        print(
+            "Checkpoint 4 reached [20 points]. Did the pings run error free? Is the packet loss rate accurate?"
+        )
 
     def __run_cp5(self):
         self.__run_cp1()
@@ -256,31 +379,43 @@ class Tests:
         self.a_perf = AnalyzePerformanceCharacteristics(self.em_net)
         host_ids = []
         while len(host_ids) < 2:
-            host_ids = list(set([random.randint(1, len(self.em_net.hosts))-1 for i in range(2)]))
+            host_ids = list(
+                set([random.randint(1, len(self.em_net.hosts)) - 1 for i in range(2)])
+            )
             hosts = [self.em_net.hosts[i] for i in host_ids]
-        receiving_rate = self.a_perf.run_iperf(hosts[0], hosts[1], udpBw='10M', seconds=2)
+        receiving_rate = self.a_perf.run_iperf(
+            hosts[0], hosts[1], udpBw="10M", seconds=2
+        )
         print("Receiving rate: %10.2f" % receiving_rate)
         self.em_net.stop_emulator()
-        print("Checkpoint 5 reached [25 points]. Did the iperf run error free? Does the receiving rate match the "
-              "output of the iperf program on your console? Are the units as you expected?")
+        print(
+            "Checkpoint 5 reached [25 points]. Did the iperf run error free? Does the receiving rate match the "
+            "output of the iperf program on your console? Are the units as you expected?"
+        )
 
     def __run_cp6(self):
         self.__run_cp1()
         self.em_net.start_emulator()
         self.a_perf = AnalyzePerformanceCharacteristics(self.em_net)
-        avg_receiving_rate = self.a_perf.get_average_throughput_all_pairs(iterations=3, udpBw='1M', seconds=2)
+        avg_receiving_rate = self.a_perf.get_average_throughput_all_pairs(
+            iterations=3, udpBw="1M", seconds=2
+        )
         print("Average receiving rate across all pairs: %10.2f" % avg_receiving_rate)
         self.em_net.stop_emulator()
-        print("Checkpoint 6 reached [30 points]. Did the iperf run error free? Does the average "
-              "receiving rate match the output of the iperf program on your console? Did all pairs of hosts test "
-              "iperf?")
+        print(
+            "Checkpoint 6 reached [30 points]. Did the iperf run error free? Does the average "
+            "receiving rate match the output of the iperf program on your console? Did all pairs of hosts test "
+            "iperf?"
+        )
 
     @staticmethod
     def __run_cp7():
         plot_impact_of_link_characteristics()
-        print("Checkpoint 7 reached [45 points]. Did the plots generate successfully? Have you properly "
-              "converted all your units? Do the results make sense? "
-              "What is your understanding of what the plots are demonstrating?")
+        print(
+            "Checkpoint 7 reached [45 points]. Did the plots generate successfully? Have you properly "
+            "converted all your units? Do the results make sense? "
+            "What is your understanding of what the plots are demonstrating?"
+        )
 
     @staticmethod
     def plot_xy(x, y, x_label, y_label, filename):
@@ -295,13 +430,15 @@ class Tests:
         :return:
         """
         plt.figure()
-        plt.title(x_label + ' vs. ' + y_label)
+        plt.title(x_label + " vs. " + y_label)
         plt.xlabel(x_label)
         plt.ylabel(y_label)
         plt.plot(x, y)
         plt.savefig(filename)
 
-    def generate_topology_dicts(self, test_param='transmission_rate', topology_vector=None):
+    def generate_topology_dicts(
+        self, test_param="transmission_rate", topology_vector=None
+    ):
         """
         Generates a dictionary of topology dictionaries generated based on the topology specified in 'topology_vector'
         that modify the 'test_param' link options.
@@ -319,36 +456,62 @@ class Tests:
         :return:
         """
         if topology_vector is None:
-            topology_vector = [random.randint(1, 4) for i in range(random.randint(2, 4))]
+            topology_vector = [
+                random.randint(1, 4) for i in range(random.randint(2, 4))
+            ]
         topologies = {}
-        if test_param == 'transmission_rate':
+        if test_param == "transmission_rate":
             for bw in [1000, 100, 10, 5]:
                 link_options = {"bw": bw, "loss": 0, "max_queue_size": 10 ** 5}
-                topologies["bw=%d" % bw] = self.create_topology_dict_with_options(topology_vector, link_options)
-        if test_param == 'loss_rate':
+                topologies["bw=%d" % bw] = self.create_topology_dict_with_options(
+                    topology_vector, link_options
+                )
+        if test_param == "loss_rate":
             for loss in [1, 10, 20, 30]:
                 link_options = {"bw": 1000, "loss": loss, "max_queue_size": 10 ** 5}
-                topologies["loss=%d" % loss] = self.create_topology_dict_with_options(topology_vector, link_options)
-        if test_param == 'queue_size':
+                topologies["loss=%d" % loss] = self.create_topology_dict_with_options(
+                    topology_vector, link_options
+                )
+        if test_param == "queue_size":
             for q_size in [10 ** 2, 10 ** 1, 1]:
                 link_options = {"bw": 1000, "loss": 0, "max_queue_size": q_size}
-                topologies["q_size=%d" % q_size] = self.create_topology_dict_with_options(topology_vector, link_options)
+                topologies[
+                    "q_size=%d" % q_size
+                ] = self.create_topology_dict_with_options(
+                    topology_vector, link_options
+                )
         return topologies
 
     @staticmethod
     def create_topology_dict_with_options(topology_vector, link_options):
-        d = {"switches": ["s%d" % i for i in range(0, len(topology_vector))],
-             "hosts": sum(
-                 [["h%d%d" % (i, j) for j in range(0, topology_vector[i])] for i in range(0, len(topology_vector))],
-                 []),
-             "link_params": []}
+        d = {
+            "switches": ["s%d" % i for i in range(0, len(topology_vector))],
+            "hosts": sum(
+                [
+                    ["h%d%d" % (i, j) for j in range(0, topology_vector[i])]
+                    for i in range(0, len(topology_vector))
+                ],
+                [],
+            ),
+            "link_params": [],
+        }
         for s_no in range(len(topology_vector)):
             if s_no < len(topology_vector) - 1:
                 d["link_params"].append(
-                    {"source": "s%d" % s_no, "destination": "s%d" % (s_no + 1), "options": link_options})
+                    {
+                        "source": "s%d" % s_no,
+                        "destination": "s%d" % (s_no + 1),
+                        "options": link_options,
+                    }
+                )
             for h_no in range(topology_vector[s_no]):
                 d["link_params"].append(
-                    {"source": "h%d%d" % (s_no, h_no), "destination": "s%d" % s_no, "options": link_options})
+                    {
+                        "source": "h%d%d" % (s_no, h_no),
+                        "destination": "s%d" % s_no,
+                        "options": link_options,
+                    }
+                )
         return d
 
 
@@ -366,17 +529,74 @@ def plot_impact_of_link_characteristics():
     :return:
     """
 
+    t = Tests()
+
+    xs = []
+    ys = []
+
+    y_label = "average server receiving rate"
+
+    #
+    # transmission rate
+    x_label = "transmission_rate"
+    generated = t.generate_topology_dicts(x_label, None)
+    for key in generated:
+        xs = [1000, 100, 10, 5]  # bw
+
+        t.em_net = EmulateNet(generated[key])
+        t.em_net.start_emulator()
+        t.a_perf = AnalyzePerformanceCharacteristics(t.em_net)
+        ys.append(t.a_perf.get_average_throughput_all_pairs())
+        t.em_net.stop_emulator()
+
+    Tests.plot_xy(xs, ys, x_label, y_label, "plot__" + x_label)
+
+    ys.clear()
+
+    #
+    # loss rate
+    x_label = "loss_rate"
+    generated = t.generate_topology_dicts(x_label, None)
+    for key in generated:
+        xs = [1, 10, 20, 30]  # loss
+
+        t.em_net = EmulateNet(generated[key])
+        t.em_net.start_emulator()
+        t.a_perf = AnalyzePerformanceCharacteristics(t.em_net)
+        ys.append(t.a_perf.get_average_throughput_all_pairs())
+        t.em_net.stop_emulator()
+
+    Tests.plot_xy(xs, ys, x_label, y_label, "plot__" + x_label)
+
+    ys.clear()
+
+    #
+    # queue size
+    x_label = "queue_size"
+    generated = t.generate_topology_dicts(x_label, None)
+    for key in generated:
+        xs = [10 ** 2, 10 ** 1, 1]  # q_size
+
+        t.em_net = EmulateNet(generated[key])
+        t.em_net.start_emulator()
+        t.a_perf = AnalyzePerformanceCharacteristics(t.em_net)
+        ys.append(t.a_perf.get_average_throughput_all_pairs())
+        t.em_net.stop_emulator()
+
+    Tests.plot_xy(xs, ys, x_label, y_label, "plot__" + x_label)
+
 
 def main():
     """
     Use the main function as you see fit.
     :return:
     """
-    os.system("sudo mn -c")     # This will clear up any residue from previous Mininet runs that might
+    os.system(
+        "sudo mn -c"
+    )  # This will clear up any residue from previous Mininet runs that might
     # interfere with your current run.
-    Tests(checkpoint=7)
+    Tests(checkpoint=6)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-
